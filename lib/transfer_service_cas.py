@@ -18,8 +18,8 @@ class Account:
             return False
 
 
-# Ledger Compare-And-Swap
-class Ledger:
+# TransferService Compare-And-Swap
+class TransferService:
     @staticmethod
     def transfer_money(from_account: Account, to_account: Account, amount: int) -> bool:
         while True:

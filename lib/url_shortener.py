@@ -8,6 +8,7 @@ import random
 import string
 import re
 from abc import ABC, abstractmethod
+from urllib.parse import urlparse
 
 
 # Abstract base class for URL shortening strategies
@@ -48,30 +49,32 @@ class RandomStrategy(ShorteningStrategy):
 
 # URL Shortener class
 class URLShortener:
-    URL_PATTERN = re.compile(r'^(https?://)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*/?$')
-
     def __init__(self, strategy: ShorteningStrategy):
-        self.lock = threading.Lock()
-        self.url_map = {}
-        self.short_to_url = {}
+        self.__lock = threading.Lock()
+        self._url_to_shorturl_map = {}
+        self._shorturl_to_url_map = {}
         self.strategy = strategy
 
-    def shorten(self, long_url):
+    def encode_url(self, long_url) -> str:
         if not self._is_valid_url(long_url):
             raise ValueError("Invalid URL format")
 
-        with self.lock:
-            if long_url in self.url_map:
-                return self.url_map[long_url]
+        with self.__lock:
+            if long_url in self._url_to_shorturl_map:
+                return self._url_to_shorturl_map[long_url]
             short_url = self.strategy.generate_short_url(long_url)
-            self.url_map[long_url] = short_url
-            self.short_to_url[short_url] = long_url
+            self._url_to_shorturl_map[long_url] = short_url
+            self._shorturl_to_url_map[short_url] = long_url
             return short_url
 
-    def unshorten(self, short_url):
-        with self.lock:
-            return self.short_to_url.get(short_url, None)
+    def decode_url(self, short_url) -> str:
+        with self.__lock:
+            return self._shorturl_to_url_map.get(short_url, None)
 
-    def _is_valid_url(self, url):
-        return bool(self.URL_PATTERN.match(url))
+    def _is_valid_url(self, url) -> bool:
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except Exception:
+            return False
 

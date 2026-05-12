@@ -20,8 +20,8 @@ class Account:
         return False
 
 
-# Ledger lock-free solution
-class Ledger:
+# TransferService lock-free solution
+class QueueTransferService:
     def __init__(self):
         self.transaction_queue = Queue()
         self.processing_thread = Thread(target=self.process_transactions, daemon=True)

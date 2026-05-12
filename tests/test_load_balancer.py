@@ -1,18 +1,18 @@
 # Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
 
 import pytest
-from lib.lb import LoadBalancer, NoServersAvailableError, RoundRobinSelectionStrategy, RandomSelectionStrategy
+from lib.load_balancer import LoadBalancer, NoServersAvailableError, RoundRobinSelectionStrategy, RandomSelectionStrategy
 from typing import List
 from random import randint
 from threading import Thread
 
 @pytest.mark.parametrize('max_instances', [-1, 0])
-def test_lb_init_raises(max_instances: int):
+def test_load_balancer_init_raises(max_instances: int):
     with pytest.raises(ValueError):
         LoadBalancer(max_instances=max_instances)
 
 @pytest.mark.parametrize('max_instances', [5, 10, 100])
-def test_lb_init(max_instances: int):
+def test_load_balancer_init(max_instances: int):
     assert LoadBalancer(max_instances=max_instances)
 
 @pytest.mark.parametrize('max_instances,servers,expected', [
@@ -20,12 +20,12 @@ def test_lb_init(max_instances: int):
     (2, ['server1', 'server2', 'server3'], [True, True, False]),
     (5, ['server1', 'server2', 'server1'], [True, True, False]),
 ])
-def test_lb_register(max_instances: int, servers: List[str], expected: List[bool]):
+def test_load_balancer_register(max_instances: int, servers: List[str], expected: List[bool]):
     lb = LoadBalancer(max_instances=max_instances)
     for server, want in zip(servers, expected):
         assert lb.register(server) == want
 
-def test_lb_unregister():
+def test_load_balancer_unregister():
     lb = LoadBalancer()
     assert not lb.unregister('server1')
     lb.register('server1')
@@ -33,7 +33,7 @@ def test_lb_unregister():
     assert lb.unregister('server1')
 
 
-def test_lb_get():
+def test_load_balancer_get():
     lb = LoadBalancer()
     with pytest.raises(NoServersAvailableError):
         lb.get()

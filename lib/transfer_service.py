@@ -24,7 +24,7 @@ class Account:
             return self.balance
 
 
-class Ledger:
+class TransferService:
     @staticmethod
     def transfer_money(from_account, to_account, amount):
         if from_account.account_id < to_account.account_id:
