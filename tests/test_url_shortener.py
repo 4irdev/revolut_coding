@@ -1,7 +1,7 @@
 # Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
 
 import pytest
-from lib.url_shortener import URLShortener, CounterStrategy, RandomStrategy, MD5Strategy, Base64Strategy
+from lib.url_shortener import URLShortener, CounterStrategy, RandomStrategy, UUIDStrategy, Base64Strategy, InvalidURLException
 
 test_urls = [
     "https://example.com",
@@ -16,7 +16,7 @@ def test_counter_strategy_uniqueness():
     assert len(short_urls) == len(test_urls)
 
 def test_md5_strategy_uniqueness():
-    shortener = URLShortener(MD5Strategy())
+    shortener = URLShortener(UUIDStrategy())
     short_urls = {shortener.encode_url(url) for url in test_urls}
 
     assert  len(short_urls) == len(test_urls)
@@ -44,5 +44,5 @@ def test_decode_url_correctness():
 def test_invalid_url_handling():
     shortener = URLShortener(CounterStrategy())
 
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidURLException):
         shortener.encode_url("invalid-url")

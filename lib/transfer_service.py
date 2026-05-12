@@ -1,5 +1,3 @@
-# Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
-
 import threading
 
 class Account:

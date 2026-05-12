@@ -1,5 +1,3 @@
-# Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
-
 from threading import Thread
 from queue import Queue
 from decimal import Decimal

@@ -1,5 +1,3 @@
-# Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
-
 import threading
 import hashlib
 import base64
@@ -7,9 +5,16 @@ import itertools
 import random
 import string
 import re
+from uuid import uuid4
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse
 
+
+class InvalidURLException(Exception):
+    pass
+
+class URLDoesNotExistException(Exception):
+    pass
 
 # Abstract base class for URL shortening strategies
 class ShorteningStrategy(ABC):
@@ -28,17 +33,16 @@ class CounterStrategy(ShorteningStrategy):
         with self.lock:
             return str(next(self.counter))
 
+# UUID strategy
+class UUIDStrategy(ShorteningStrategy):
+    def generate_short_url(self, long_url):
+        return uuid4().hex
+
 
 # Base64 encoding strategy
 class Base64Strategy(ShorteningStrategy):
     def generate_short_url(self, long_url):
         return base64.urlsafe_b64encode(long_url.encode()).decode()[:8]
-
-
-# MD5 hash strategy
-class MD5Strategy(ShorteningStrategy):
-    def generate_short_url(self, long_url):
-        return hashlib.md5(long_url.encode()).hexdigest()[:8]
 
 
 # Randomized strategy
@@ -57,7 +61,7 @@ class URLShortener:
 
     def encode_url(self, long_url) -> str:
         if not self._is_valid_url(long_url):
-            raise ValueError("Invalid URL format")
+            raise InvalidURLException("Invalid URL format")
 
         with self.__lock:
             if long_url in self._url_to_shorturl_map:
@@ -69,7 +73,9 @@ class URLShortener:
 
     def decode_url(self, short_url) -> str:
         with self.__lock:
-            return self._shorturl_to_url_map.get(short_url, None)
+            if short_url not in self._shorturl_to_url_map:
+                raise URLDoesNotExistException("Short URL does not exist")
+            return self._shorturl_to_url_map[short_url]
 
     def _is_valid_url(self, url) -> bool:
         try:

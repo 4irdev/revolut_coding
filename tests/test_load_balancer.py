@@ -1,14 +1,22 @@
 # Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
 
 import pytest
-from lib.load_balancer import LoadBalancer, NoServersAvailableError, RoundRobinSelectionStrategy, RandomSelectionStrategy
+from lib.load_balancer import (
+    LoadBalancer,
+    NotPositiveServersCountError,
+    MaxServersCountError,
+    ServerAlreadyExistsError,
+    ServerNotFoundError,
+    RoundRobinSelectionStrategy,
+    RandomSelectionStrategy,
+)
 from typing import List
 from random import randint
 from threading import Thread
 
 @pytest.mark.parametrize('max_instances', [-1, 0])
 def test_load_balancer_init_raises(max_instances: int):
-    with pytest.raises(ValueError):
+    with pytest.raises(NotPositiveServersCountError):
         LoadBalancer(max_instances=max_instances)
 
 @pytest.mark.parametrize('max_instances', [5, 10, 100])
@@ -16,26 +24,32 @@ def test_load_balancer_init(max_instances: int):
     assert LoadBalancer(max_instances=max_instances)
 
 @pytest.mark.parametrize('max_instances,servers,expected', [
-    (5, ['server1'], [True]),
-    (2, ['server1', 'server2', 'server3'], [True, True, False]),
-    (5, ['server1', 'server2', 'server1'], [True, True, False]),
+    (5, ['server1'], [None]),
+    (2, ['server1', 'server2', 'server3'], [None, None, MaxServersCountError]),
+    (5, ['server1', 'server2', 'server1'], [None, None, ServerAlreadyExistsError]),
 ])
-def test_load_balancer_register(max_instances: int, servers: List[str], expected: List[bool]):
+def test_load_balancer_register(max_instances: int, servers: List[str], expected: List):
     lb = LoadBalancer(max_instances=max_instances)
     for server, want in zip(servers, expected):
-        assert lb.register(server) == want
+        if want is None:
+            assert lb.register(server) == server
+        else:
+            with pytest.raises(want):
+                lb.register(server)
 
 def test_load_balancer_unregister():
     lb = LoadBalancer()
-    assert not lb.unregister('server1')
+    with pytest.raises(ServerNotFoundError):
+        lb.unregister('server1')
     lb.register('server1')
-    assert not lb.unregister('server2')
-    assert lb.unregister('server1')
+    with pytest.raises(ServerNotFoundError):
+        lb.unregister('server2')
+    assert lb.unregister('server1') == 'server1'
 
 
 def test_load_balancer_get():
     lb = LoadBalancer()
-    with pytest.raises(NoServersAvailableError):
+    with pytest.raises(NotPositiveServersCountError):
         lb.get()
     servers = ['server1', 'server2', 'server3']
     for server in servers:
@@ -50,11 +64,17 @@ def test_no_deadlocks():
     def register_and_unregister():
         for _ in range(1000):
             server = f"server{randint(1, 10)}"
-            lb.register(server)
-            lb.unregister(server)
+            try:
+                lb.register(server)
+            except (MaxServersCountError, ServerAlreadyExistsError):
+                pass
+            try:
+                lb.unregister(server)
+            except ServerNotFoundError:
+                pass
             try:
                 lb.get()
-            except NoServersAvailableError:
+            except NotPositiveServersCountError:
                 pass
 
     for _ in range(10):
@@ -91,7 +111,8 @@ def test_random_strategy():
 
     for _ in range(20):
         server = f"server{randint(1, 10)}"
-
+        if server in servers:
+            continue
         servers.add(server)
         lb.register(server)
 

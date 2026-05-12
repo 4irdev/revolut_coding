@@ -1,6 +1,7 @@
-# Written by Bohdan Shtepan <bohdan@shtepan.com>, February 2025
-
 from multiprocessing import Value
+
+class NotPositiveAmountError(Exception):
+    pass
 
 class Account:
     def __init__(self, account_id: int, balance: int = 0):
@@ -22,10 +23,16 @@ class Account:
 class TransferService:
     @staticmethod
     def transfer_money(from_account: Account, to_account: Account, amount: int) -> bool:
-        while True:
-            old_balance = from_account.get_balance()
-            if old_balance < amount:
+        if amount <= 0:
+            raise NotPositiveAmountError()
+        while True: # todo: add timeout to avoid infinite loop
+            old_from = from_account.get_balance()
+            if old_from < amount:
                 return False
-            if from_account.compare_and_swap(old_balance, old_balance - amount):
-                to_account.compare_and_swap(to_account.get_balance(), to_account.get_balance() + amount)
+            if from_account.compare_and_swap(old_from, old_from - amount):
+                break
+
+        while True: # todo: add timeout to avoid infinite loop
+            old_to = to_account.get_balance()
+            if to_account.compare_and_swap(old_to, old_to + amount):
                 return True
